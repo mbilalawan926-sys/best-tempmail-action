@@ -119,7 +119,7 @@ The verification code is **not** masked in the log. It is a throwaway value for 
 inbox, and masking it would replace it with `***` in exactly the log someone reads to work out
 why a test failed.
 
-This Action has no dependencies and no build step. It is a single `index.js` using Node 20's
+This Action has no dependencies and no build step. It is a single `index.js` using Node 24's
 built-in `fetch`, so there is no bundled `dist/` to go stale when the source changes.
 
 ## Licence
