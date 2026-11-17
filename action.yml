@@ -78,5 +78,5 @@ outputs:
     description: "true or false, whether a message arrived. Set by wait."
 
 runs:
-  using: "node20"
+  using: "node24"
   main: "index.js"
