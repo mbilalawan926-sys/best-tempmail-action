@@ -1,0 +1,84 @@
+# Two jobs: the mocked suite on every push, and a real end-to-end run against
+# the live API when a key is available.
+#
+# The second one exists because the mocked suite agrees with whatever its
+# author assumed. A link extractor in this project passed 18 hand-written
+# tests and then picked a footer link on the first real email it ever saw.
+name: test
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  mocked:
+    name: mocked suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node test-action.js
+
+  live:
+    name: real API
+    runs-on: ubuntu-latest
+    # Skipped automatically on forks and anywhere the secret is absent, rather
+    # than failing and looking broken.
+    if: github.event_name != 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Skip if no key is configured
+        id: gate
+        run: |
+          if [ -n "${{ secrets.BEST_TEMPMAIL_KEY }}" ]; then
+            echo "has_key=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_key=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::BEST_TEMPMAIL_KEY is not set, skipping the live test"
+          fi
+
+      - name: Create an inbox
+        if: steps.gate.outputs.has_key == 'true'
+        id: inbox
+        uses: ./
+        with:
+          api-key: ${{ secrets.BEST_TEMPMAIL_KEY }}
+
+      - name: It returned an address
+        if: steps.gate.outputs.has_key == 'true'
+        run: |
+          echo "got: ${{ steps.inbox.outputs.address }}"
+          case "${{ steps.inbox.outputs.address }}" in
+            *@*) echo "looks like an address" ;;
+            *) echo "::error::not an address"; exit 1 ;;
+          esac
+
+      - name: Waiting for mail that will not come should report not-found
+        if: steps.gate.outputs.has_key == 'true'
+        id: nomail
+        uses: ./
+        with:
+          api-key: ${{ secrets.BEST_TEMPMAIL_KEY }}
+          operation: wait
+          address: ${{ steps.inbox.outputs.address }}
+          timeout: 8
+          subject-contains: this-subject-will-never-arrive
+          fail-if-no-mail: false
+
+      - name: found should be false
+        if: steps.gate.outputs.has_key == 'true'
+        run: |
+          test "${{ steps.nomail.outputs.found }}" = "false" \
+            || { echo "::error::expected found=false, got '${{ steps.nomail.outputs.found }}'"; exit 1; }
+
+      - name: Clean up
+        if: always() && steps.gate.outputs.has_key == 'true'
+        uses: ./
+        with:
+          api-key: ${{ secrets.BEST_TEMPMAIL_KEY }}
+          operation: delete
+          address: ${{ steps.inbox.outputs.address }}

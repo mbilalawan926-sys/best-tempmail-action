@@ -1,0 +1,82 @@
+name: "best-tempmail"
+description: "Create a disposable inbox, wait for the email, and get the OTP code and verification link as step outputs."
+author: "best-tempmail.com"
+
+branding:
+  icon: "mail"
+  color: "blue"
+
+inputs:
+  api-key:
+    description: >-
+      Your best-tempmail API key. Store it as a repository secret and pass
+      ${{ secrets.BEST_TEMPMAIL_KEY }}. Without a key the free tier applies,
+      which allows 3 inboxes per day per IP and does not include the otp or
+      action-url outputs.
+    required: false
+  operation:
+    description: "create, wait, or delete."
+    required: false
+    default: "create"
+
+  # create
+  domain:
+    description: "Put the inbox on a specific domain. Omit to let the API choose."
+    required: false
+  lifetime-minutes:
+    description: "How long the inbox should live. Capped by your plan."
+    required: false
+
+  # wait
+  address:
+    description: "The inbox to wait on or delete. Required for operation wait and delete."
+    required: false
+  timeout:
+    description: "Seconds to wait for a message before failing. Default 60."
+    required: false
+    default: "60"
+  subject-contains:
+    description: >-
+      Only match a message whose subject contains this text. Switches from
+      long-polling to filtered polling.
+    required: false
+  from-contains:
+    description: "Only match a message whose sender contains this text."
+    required: false
+  fail-if-no-mail:
+    description: >-
+      Fail the step if no message arrives before the timeout. Default true,
+      because a silent pass here means a test that verifies nothing.
+    required: false
+    default: "true"
+
+  base-url:
+    description: "API base URL. Only change this for testing."
+    required: false
+    default: "https://api.best-tempmail.com/v1"
+
+outputs:
+  address:
+    description: "The inbox address. Set by create."
+  expires-at:
+    description: "When the inbox expires. Set by create."
+  message-id:
+    description: "The id of the message that arrived. Set by wait."
+  subject:
+    description: "Its subject. Set by wait."
+  from:
+    description: "Its sender. Set by wait."
+  otp:
+    description: >-
+      The verification code found in the message, or empty if there was none.
+      Requires a paid key.
+  action-url:
+    description: >-
+      The link the email is asking the reader to click, or empty if the message
+      had no clear call to action. Requires a paid key.
+  found:
+    description: "true or false, whether a message arrived. Set by wait."
+
+runs:
+  using: "node20"
+  main: "index.js"
