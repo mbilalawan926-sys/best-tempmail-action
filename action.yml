@@ -10,7 +10,7 @@ inputs:
   api-key:
     description: >-
       Your best-tempmail API key. Store it as a repository secret and pass
-      ${{ secrets.BEST_TEMPMAIL_KEY }}. Without a key the free tier applies,
+      secrets.BEST_TEMPMAIL_KEY. Without a key the free tier applies,
       which allows 3 inboxes per day per IP and does not include the otp or
       action-url outputs.
     required: false
